@@ -45,3 +45,17 @@ UptimeRobot's log export is a CSV of past events. Uptime recognises it and count
 ## What has been tested
 
 The mapping follows the field names in UptimeRobot's published v3 API description. The synthetic-file journey covers preview, paused apply, reading the saved definitions, export and undo, including status sets/ranges and both keyword conditions. Live account extraction, alert-contact mapping and status-page handoff are not implemented by this importer. It has not been tested with an export from a real UptimeRobot account. UptimeRobot does not publish its log export columns; Uptime looks for a date or time column and an event column.
+
+## Owner-approved moves through Business
+
+Business can drive this same saved-monitors mapping through Base's optional import door. It starts off. In **Runner / archive → Business imports**, enable **Allow owner-approved imports from Business** and save. The installation must already have its owner-claim issuer, installation ID, app origin and public signing-key ring configured. Open Runner / archive first to establish its local runner. No UptimeRobot credential is sent to Uptime.
+
+The door accepts saved v3 pages as NDJSON (one `{data: [...], nextLink: ...}` page per line), with a stable `id` on every source monitor, up to 2 MiB and 500 source records. It uses the existing importer’s supported types, differences, credential references and validation. A name already used by a monitor outside this move is refused for review in Definitions. Imported monitors count toward the installation’s ordinary monitor limit and arrive paused. Catch-ups retain source IDs; Base refuses native edit conflicts and reports missing source records without deleting them.
+
+The signed-grant protocol is documented in [the vendored Base door](https://github.com/runeditrun/base/blob/0ed18342a1ca240f1ae698bb50e18385b6f509ec/modules/import-kit/src/door/README.md). Each request needs a fresh short-lived ES256 grant. Upload checks every chunk and the complete bundle hash. Plan writes no native monitor or evidence; apply requires the retained plan’s exact reviewed fingerprint and signed owner approval. Reconcile reads the actual monitors and import provenance. Original bytes, plans and grants stay in this installation and are excluded from portable archives; native definitions and revisions use Uptime’s existing archive.
+
+Business imports appear in **Definitions → Applied batches** with “Approved via Business by” the owner, the approval time and fingerprint. **Undo this batch** remains available even after Business is switched off or its signing key is revoked. Undo keeps imported monitors paused and preserves their revisions and evidence. A native edit makes strict Business undo refuse instead of overwriting it. Undo snapshots newest first; a fresh move after undo needs a new namespace.
+
+Erasing a monitor also withdraws the indivisible source export and retires its move’s retained plans and undo authority, in the same database transaction. Other monitors from that export remain in Uptime with their own revisions and evidence.
+
+To revoke access, switch Business imports off or expand **Grant signing keys**, select the key ID and save. Revoking a key is permanent for that ID, including after re-enabling imports; configure a new signing-key ID to grant access again. A synthetic public-door journey covers off-by-default 404, upload, zero-write native plan, fingerprint-checked apply, reconciliation, history, undo and persistent revocation. No real customer export was used.

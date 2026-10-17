@@ -1,7 +1,9 @@
+import {businessImportLocalTables} from './business-import/inventory.server.ts'
 import {TABLES,columns} from './archive-schema.ts'
 /** Every permanent schema table has a portability decision. Unknown tables and
  * foreign integration namespaces refuse export rather than silently lose data. */
 export const installationLocalTables:Record<string,string>={
+ ...businessImportLocalTables,
  notification_preferences:'Installation alert time zone; immutable event contexts preserve their own saved zone in archives.',
  alert_routes:'Installation alert recipient policy; a receiving owner configures local routes explicitly.',
  alert_route_changes:'Installation detailed route history; opaque routing audit entries travel separately.',

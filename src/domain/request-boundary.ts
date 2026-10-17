@@ -13,6 +13,8 @@ const id={id:identity},source=(value:string)=>SOURCES.includes(value),digest=(va
 const reportQuery={...Object.fromEntries(['period','from','to','timeZone','zone','sla','slaTarget','bucket','location','rootCause'].map(name=>[name,(value:string)=>identity(value)&&value.length<=150])),format:(value:string)=>['csv','json'].includes(value)}
 const incidentQuery=Object.fromEntries(['monitor','tag','from','to','state','rootCause','cursor','limit'].map(name=>[name,identity]))
 export const apiRoutes:readonly Route[]=[
+ {method:'GET',path:'/api/business-import-settings',body:'none'},
+ {method:'POST',path:'/api/business-import-settings',body:'object'},
  {method:'GET',path:'/api/incident-settings',body:'none'},
  {method:'PATCH',path:'/api/incident-settings',body:'object'},
  {method:'GET',path:'/api/incidents/:id',params:id,body:'none'},

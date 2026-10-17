@@ -1,5 +1,7 @@
 import {dialogFocusReturn} from './notification-dialogs.js';
+import {businessImportSettings} from './business-import-settings.js';
 export function runnerSettings(container,runners,api,refresh){
+ businessImportSettings(container,api);
  const heading=document.createElement('h3');heading.textContent='Runner networks';container.append(heading);
  const list=document.createElement('ul');
  for(const runner of runners){const row=document.createElement('li');row.textContent=`${runner.networkLabel} · ${runner.runnerId} · ${runner.revokedAt?'Revoked':runner.lastContactAt?'Contact '+new Date(runner.lastContactAt).toLocaleString():'Never contacted'} · ${runner.capabilities?.browser?'Has a browser for flows':'No browser for flows'}`;

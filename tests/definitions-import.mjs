@@ -35,7 +35,12 @@ try{
  // Every table, every row, in storage order. Reads in this test never write.
  async function scan(){
   const names=(await DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name<>'_cf_METADATA' ORDER BY name").all()).results.map(r=>r.name);
-  return Object.fromEntries(await Promise.all(names.map(async name=>[name,(await DB.prepare(`SELECT * FROM "${name}" ORDER BY rowid`).all()).results])));
+  const rows=[];
+  for(let offset=0;offset<names.length;offset+=32){
+   const chunk=names.slice(offset,offset+32),results=await DB.batch(chunk.map(name=>DB.prepare(`SELECT * FROM "${name}" ORDER BY rowid`)));
+   rows.push(...chunk.map((name,index)=>[name,results[index].results]));
+  }
+  return Object.fromEntries(rows);
  }
  const unchanged=async(label,attempt)=>{const before=await scan(),result=await attempt();assert.deepEqual(await scan(),before,`${label} leaves the installation byte-identical`);return result};
  const preview=async(text,source='auto',type)=>json(await send(`/api/definitions/preview?source=${source}`,text,{type}));

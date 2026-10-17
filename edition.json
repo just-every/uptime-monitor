@@ -44,7 +44,9 @@
           "migrations/0031_idp_owner.sql",
           "migrations/0032_provider_pins.sql",
           "migrations/0033_dependency_setup.sql",
-          "migrations/0034_dependency_approval.sql"
+          "migrations/0034_dependency_approval.sql",
+          "src/base/modules/import-kit/src",
+          "src/base/modules/d1-transport"
         ],
         "origin": {
           "repository": "https://github.com/runeditrun/base.git",

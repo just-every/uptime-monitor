@@ -31,7 +31,10 @@ import {configurationResponse,validateWorkerConfiguration} from './domain/startu
 import {isPublicDocument,publicPath} from './domain/public-paths.ts'
 import {limitPublicRequest} from './domain/public-rate-limits.server.ts'
 import {erase} from './domain/erasure.server.ts'
-import {previewDefinitions,applyDefinitions,exportDefinitions,listBatches,undoBatch} from './domain/definitions/index.server.ts'
+import {previewDefinitions,applyDefinitions,exportDefinitions} from './domain/definitions/index.server.ts'
+import {businessImportDoor} from './domain/business-import/door.server.ts'
+import {businessImportSettings} from './domain/business-import/settings.server.ts'
+import {definitionImportHistory,undoDefinitionImport} from './domain/business-import/history.server.ts'
 import {exportJournal} from './domain/archive-fence.server.ts'
 import {operatorSession,authenticatedSession} from './domain/operator-auth.server.ts'
 import {accessDeniedDocument} from './domain/access-document.server.ts'
@@ -147,8 +150,10 @@ const operator=async(c:any)=>({kind:'operator' as const,ref:(await operatorSessi
 api.post('/api/definitions/preview',async c=>c.json(await previewDefinitions(c.env,c.get('requestText'),c.req.query('source'))))
 api.post('/api/definitions/apply',async c=>c.json(await applyDefinitions(c.env,c.get('requestText'),c.req.query('source'),c.req.query('digest'),await operator(c)),201))
 api.get('/api/definitions/export',async c=>{c.header('content-disposition','attachment; filename="uptime.monitors.json"');return c.json(await exportDefinitions(c.env))})
-api.get('/api/definitions/batches',async c=>c.json(await listBatches(c.env)))
-api.post('/api/definitions/batches/:id/undo',async c=>c.json(await undoBatch(c.env,c.req.param('id'),await operator(c))))
+api.get('/api/definitions/batches',async c=>c.json(await definitionImportHistory(c.env,c.req.raw)))
+api.post('/api/definitions/batches/:id/undo',async c=>c.json(await undoDefinitionImport(c.env,c.req.raw,c.req.param('id'),await operator(c))))
+api.get('/api/business-import-settings',async c=>c.json(await businessImportSettings(c.env,c.req.raw)))
+api.post('/api/business-import-settings',async c=>c.json(await businessImportSettings(c.env,c.req.raw,c.get('input'))))
 api.get('/api/erasure-journal',async c=>c.json(await exportJournal(c.env)))
 api.post('/api/monitors/:id/erase',async c=>c.json(await erase(c.env,'monitor',c.req.param('id'),{kind:'operator',ref:(await operatorSession(c.env,c.req.raw))!.operator.id},c.get('input').name)))
 api.post('/api/operators/:id/erase',async c=>c.json(await erase(c.env,'operator',c.req.param('id'),{kind:'operator',ref:(await operatorSession(c.env,c.req.raw))!.operator.id})))
@@ -204,6 +209,7 @@ const handler={async fetch(request,env,execution){
  const limited=await limitPublicRequest(env as Bindings,request);if(limited)return limited;
  const bindings=env as Bindings,url=new URL(request.url),path=url.pathname;
  if(url.origin!==bindings.UPTIME_ORIGIN||(request.headers.has('host')&&request.headers.get('host')?.toLowerCase()!==url.host.toLowerCase()))return new Response('Invalid host',{status:403});
+ if(path.startsWith('/api/rer/import/'))return businessImportDoor(bindings,request);
  // The Lobby at / and GET /setup/state: Base's shared responses, before the public-path guard and the document renderer.
  const lobbyBindings={DB:bindings.DB,AUTH_ORIGIN:bindings.UPTIME_ORIGIN!};
  const state=await setupStateResponse(request,lobbyBindings,claimed);if(state)return state;

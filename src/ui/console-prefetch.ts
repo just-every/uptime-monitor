@@ -11,5 +11,5 @@ window.uptimePrefetch=early;
 // public/app.js and the modules it imports, so the browser fetches the whole graph while React hydrates instead of in
 // three waves after it (they are revalidated on each load). Keep it to app.js's static imports, all levels; a module left
 // out only loads later, a module that is no longer imported is fetched for nothing.
-export const CONSOLE_MODULES=['app.js','runner-settings.js','notification-dialogs.js','notifications.js','action-feedback.mjs','console-format.js',
+export const CONSOLE_MODULES=['app.js','runner-settings.js','business-import-settings.js','notification-dialogs.js','notifications.js','action-feedback.mjs','console-format.js',
  'monitor-coverage.js','monitor-page.js','definitions.js','alert-drills.js','monitor-incidents.js','heartbeat-key.js','monitor-timeline.js','flow-panel.js','protocol-panel.js']

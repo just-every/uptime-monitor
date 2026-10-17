@@ -33,7 +33,7 @@
     "test:access": "node tests/auth-input-boundary.mjs && node tests/access-matrix.mjs && node tests/access-smoke.mjs",
     "test:owner-deploy": "node --test --test-concurrency=1 tests/owner-deploy-lifecycle.mjs",
     "test:archive": "node tests/archive-roundtrip.mjs",
-    "test:definitions": "node tests/definitions-import.mjs",
+    "test:definitions": "node tests/definitions-import.mjs && node tests/business-import-door.mjs",
     "test:readme": "node tests/readme-journey.mjs",
     "artifact-prepare": "node scripts/deployment/prepare.mjs",
     "test:runner": "node tests/signed-runner.mjs",

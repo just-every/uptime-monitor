@@ -1026,6 +1026,14 @@
         "environment": "all"
       },
       {
+        "path": "/business-import-settings.js",
+        "match": "exact",
+        "kind": "asset",
+        "class": "assets",
+        "authentication": "None; emitted static resource only.",
+        "environment": "all"
+      },
+      {
         "path": "/external-check.js",
         "match": "exact",
         "kind": "asset",

@@ -5,6 +5,7 @@ import {TABLES} from './archive-schema.ts'
 import {installationLocalTables} from './archive-inventory.ts'
 import {auditStatement,mutationGuard,type AuditActor} from './audit.server.ts'
 import type {Bindings} from './control.server.ts'
+import {businessErasureScope,eraseBusinessCustody} from './business-import/erasure.server.ts'
 type Selection={table:string;where:string;args:unknown[]};
 const selection=(table:string,where:string,...args:unknown[]):Selection=>({table,where,args});
 export async function erase(env:Bindings,kind:'monitor'|'destination'|'operator',id:string,actor:AuditActor,confirmation?:string){
@@ -15,6 +16,7 @@ export async function erase(env:Bindings,kind:'monitor'|'destination'|'operator'
  if(kind==='operator'&&entity.role==='owner'&&entity.status==='active'&&Number((await env.DB.prepare("SELECT COUNT(*) n FROM oa_operators WHERE role='owner' AND status='active'").first<any>())?.n)<=1)throw Error(env.UPTIME_LOCAL_REVIEW==='true'?'The last owner cannot be erased. Use rer reset --yes to erase the local installation.':'The last owner cannot be erased. Redeploy to replace the hosted installation.');
  const actingOwner=actor.kind==='operator'?await env.DB.prepare("SELECT version FROM oa_operators WHERE id=? AND role='owner' AND status='active'").bind(actor.ref).first<any>():null;
  if(actor.kind==='operator'&&!actingOwner)throw Error('Owner authorization required');
+ const businessNamespaces=kind==='monitor'?await businessErasureScope(env,id,JSON.parse(entity.definition).name):[];
  // Capture counts before discovering dependents: a job or credential arriving
  // while planning must invalidate the transaction, including uncaptured rows.
  const allNames=(await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'rer_portability_%' AND name NOT GLOB '_cf_*'").all<any>()).results;
@@ -78,6 +80,9 @@ export async function erase(env:Bindings,kind:'monitor'|'destination'|'operator'
  const receipt={id:crypto.randomUUID(),entityKind:kind,counts,completedAt:Date.now()};
  if(kind==='operator')statements.push(...incidentOperatorErasureStatements(env,id),env.DB.prepare("UPDATE uptime_audit SET actor_kind='anonymized',actor_ref=? WHERE actor_kind='operator' AND actor_ref=?").bind(crypto.randomUUID(),id),env.DB.prepare("UPDATE definition_batches SET actor_kind='anonymized',actor_ref=? WHERE actor_kind='operator' AND actor_ref=?").bind(crypto.randomUUID(),id),env.DB.prepare('UPDATE alert_route_changes SET actor_ref=NULL WHERE actor_ref=?').bind(id),env.DB.prepare('UPDATE alert_drills SET started_by=NULL WHERE started_by=?').bind(id));
  statements.push(env.DB.prepare('INSERT INTO uptime_erasure_receipts(id,entity_kind,counts,completed_at) VALUES(?,?,?,?)').bind(receipt.id,kind,JSON.stringify(counts),receipt.completedAt),...await service.invalidateTransfersStatements(),auditStatement(env,kind==='operator'&&actor.ref===id?{kind:'anonymized',ref:crypto.randomUUID()}:actor,'erase',kind,receipt.id,'1',[],receipt.completedAt));
- try{await env.DB.batch(statements)}catch(error){if(String(error).includes('last_owner')||(kind==='operator'&&entity.role==='owner'&&entity.status==='active'&&Number((await env.DB.prepare("SELECT COUNT(*) n FROM oa_operators WHERE role='owner' AND status='active'").first<any>())?.n)<=1))throw Error('The last owner cannot be erased. Use rer reset --yes locally or redeploy hosted.');if(String(error).includes('uptime_audit.id'))throw Object.assign(Error('Installation changed during erasure. No data was erased; try again.'),{status:409});throw error}
+ try{
+  if(businessNamespaces.length)await eraseBusinessCustody(env,id,actor,actingOwner.version,businessNamespaces,statements,await service.redactionStatements());
+  else await env.DB.batch(statements);
+ }catch(error){if(String(error).includes('last_owner')||(kind==='operator'&&entity.role==='owner'&&entity.status==='active'&&Number((await env.DB.prepare("SELECT COUNT(*) n FROM oa_operators WHERE role='owner' AND status='active'").first<any>())?.n)<=1))throw Error('The last owner cannot be erased. Use rer reset --yes locally or redeploy hosted.');if(String(error).includes('uptime_audit.id'))throw Object.assign(Error('Installation changed during erasure. No data was erased; try again.'),{status:409});throw error}
  return {erased:true,receipt,selfErased:kind==='operator'&&actor.kind==='operator'&&actor.ref===id};
 }

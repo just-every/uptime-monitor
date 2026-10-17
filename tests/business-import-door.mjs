@@ -35,6 +35,19 @@ try{
  const good=async(action,body,extra,namespace)=>{const r=await door(action,body,extra,namespace);assert.equal(r.status,200,`${action}: ${JSON.stringify(r.body)}`);return r.body};
  const snapshot=async()=>{const names=(await DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'ik_%' AND name<>'_cf_METADATA' ORDER BY name").all()).results.map(row=>row.name);return Object.fromEntries(await Promise.all(names.map(async name=>[name,(await DB.prepare(`SELECT * FROM "${name}" ORDER BY rowid`).all()).results])))};
 
+ function nativeUnchanged(before,after,requests,label){
+  const old=before.public_rate_limits,current=after.public_rate_limits;
+  assert.deepEqual(current.filter(row=>row.class!=='imports'),old.filter(row=>row.class!=='imports'),'other admission classes stay unchanged');
+  const imports=rows=>rows.filter(row=>row.class==='imports');
+  assert.equal(imports(current).reduce((n,row)=>n+row.request_count,0)-imports(old).reduce((n,row)=>n+row.request_count,0),requests,'only the expected import requests are counted');
+  for(const previous of imports(old)){
+   const row=current.find(row=>row.class===previous.class&&row.client_hash===previous.client_hash&&row.window_start===previous.window_start);
+   assert.ok(row,'existing admission rows are retained');assert.ok(row.request_count>=previous.request_count);
+   assert.deepEqual({...row,request_count:previous.request_count},previous,'admission metadata stays intact');
+  }
+  assert.deepEqual({...after,public_rate_limits:old},before,label);
+ }
+
  assert.equal((await door('uploads',{})).status,404,'off by default before grant/body admission');
  assert.equal((await settings()).body.enabled,false);
  assert.equal((await fetch(origin+'/api/business-import-settings')).status,401);
@@ -43,11 +56,11 @@ try{
  assert.equal((await owner('/api/overview')).status,200);
  const upload=await good('uploads',{name:'uptimerobot.synthetic.ndjson',bundleSha256:hash(source),totalBytes:source.length,totalChunks:1,index:0,chunkSha256:hash(source),base64:source.toString('base64')});
  const beforePlan=await snapshot(),plan=await good('plan',{uploadId:upload.uploadId});
- assert.deepEqual(await snapshot(),beforePlan,'planning writes no native or installation product state');
+ nativeUnchanged(beforePlan,await snapshot(),1,'planning writes no native or installation product state');
  assert.equal(plan.counts.input,3);assert.equal(plan.counts.effects,2);assert.equal(plan.rejected.length,1);
  assert.match(plan.rejected[0].reason,/not supported/);
  assert.equal((await door('apply',{planId:plan.planId,reviewedFingerprint:'0'.repeat(64)},{...approval,fingerprint:plan.fingerprint})).status,403);
- assert.deepEqual(await snapshot(),beforePlan,'wrong reviewed fingerprint cannot write');
+ nativeUnchanged(beforePlan,await snapshot(),2,'wrong reviewed fingerprint cannot write');
  let applied=await good('apply',{planId:plan.planId,reviewedFingerprint:plan.fingerprint},{...approval,fingerprint:plan.fingerprint});
  for(let n=0;applied.job.state!=='completed'&&n<10;n++)applied=await good('apply',{planId:plan.planId,reviewedFingerprint:plan.fingerprint},{...approval,fingerprint:plan.fingerprint});
  assert.equal(applied.job.state,'completed');

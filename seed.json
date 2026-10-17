@@ -648,6 +648,14 @@
         "environment": "all"
       },
       {
+        "path": "/api/rer/import/",
+        "match": "prefix",
+        "kind": "credentialed",
+        "class": "imports",
+        "authentication": "Off by default (404). When enabled, every request requires a short-lived installation-, namespace- and action-scoped ES256 Business grant.",
+        "environment": "all"
+      },
+      {
         "path": "/app.js",
         "match": "exact",
         "kind": "asset",
@@ -1201,7 +1209,8 @@
       "assets": 600,
       "development": 600,
       "drills": 30,
-      "development-assets": 1800
+      "development-assets": 1800,
+      "imports": 120
     },
     "notes": "Owner-tunable source settings; each class shares one fixed 60-second D1 window per client. Production assets retain their own budget. Local Vite compiler assets use a separate budget for the unbundled browser graph: about 140 module requests per console load, with room for twelve loads per minute. These defaults are estimated, not load tested. Hosted CF-Connecting-IP must be a valid single IP; missing/malformed values share an unknown-client bucket. Local mode ignores all forwarding headers and uses one loopback bucket. Only keyed hashes of client identities are stored."
   },
